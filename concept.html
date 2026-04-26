@@ -274,10 +274,66 @@
     .rm-content ul { padding-left: 16px; }
     .rm-content li { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
 
+    /* ── CONTACT ── */
+    .contact-wrap {
+      text-align: center;
+      padding: 80px 24px;
+    }
+    .contact-box {
+      display: inline-block;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 56px;
+      max-width: 520px;
+      width: 100%;
+    }
+    .contact-box h2 { font-size: 26px; font-weight: 700; margin-bottom: 10px; }
+    .contact-box .sub { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+    .contact-form { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+    .contact-form input,
+    .contact-form textarea {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      resize: vertical;
+    }
+    .contact-form input:focus,
+    .contact-form textarea:focus { border-color: var(--blue); }
+    .contact-form input::placeholder,
+    .contact-form textarea::placeholder { color: var(--muted); }
+    .contact-form textarea { min-height: 120px; }
+    .send-btn {
+      background: var(--blue);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 13px;
+      text-align: center;
+      transition: opacity 0.15s;
+    }
+    .send-btn:hover { opacity: 0.85; }
+    .contact-direct {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .contact-direct a { color: var(--blue); text-decoration: none; }
+    .contact-direct a:hover { text-decoration: underline; }
+
     /* ── FOOTER ── */
     footer {
       text-align: center;
-      padding: 48px 24px;
+      padding: 40px 24px;
       border-top: 1px solid var(--border);
       color: var(--muted);
       font-size: 13px;
@@ -638,6 +694,44 @@
     </div>
   </div>
 </section>
+
+<!-- ═══════════════════════════════ CONTACT ═══════════════════════════════ -->
+<hr class="divider" />
+
+<div class="contact-wrap">
+  <div class="contact-box">
+    <h2>문의하기</h2>
+    <p class="sub">도입 상담, 파일럿 PoC, 기술 문의 — 무엇이든 보내주세요.</p>
+    <form class="contact-form" id="contactForm">
+      <input type="text"  id="cfName"    placeholder="이름 / 회사명" required />
+      <input type="email" id="cfEmail"   placeholder="이메일 주소"   required />
+      <input type="text"  id="cfSubject" placeholder="제목"          />
+      <textarea           id="cfBody"    placeholder="문의 내용을 입력해 주세요."></textarea>
+      <button type="submit" class="send-btn">이메일로 보내기</button>
+    </form>
+    <div class="contact-direct">
+      직접 보내시려면 &nbsp;<a href="mailto:jinguheo@gmail.com">jinguheo@gmail.com</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('contactForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var name    = document.getElementById('cfName').value.trim();
+    var email   = document.getElementById('cfEmail').value.trim();
+    var subject = document.getElementById('cfSubject').value.trim() || '3Dto2DVerify 문의';
+    var body    = document.getElementById('cfBody').value.trim();
+
+    var mailto = 'mailto:jinguheo@gmail.com'
+      + '?subject=' + encodeURIComponent('[3Dto2DVerify] ' + subject)
+      + '&body='    + encodeURIComponent(
+          '보내는 분: ' + name + ' (' + email + ')\n\n' + body
+        );
+
+    window.location.href = mailto;
+  });
+</script>
 
 <!-- ═══════════════════════════════ FOOTER ═══════════════════════════════ -->
 <footer>
