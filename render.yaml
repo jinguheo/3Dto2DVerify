@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: 3dto2dverify
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: python -m py_compile server.py
+    startCommand: python server.py --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11

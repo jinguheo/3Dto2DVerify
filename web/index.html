@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>3Dto2DVerify | 초기 투자 컨셉</title>
+    <meta
+      name="description"
+      content="3D CAD와 2D 카메라를 연결해 제조 품질 검사를 자동화하는 초기 투자용 회사 컨셉 페이지"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="3Dto2DVerify 홈">
+        <span class="brand-mark">3D</span>
+        <span>
+          <strong>3Dto2DVerify</strong>
+          <small>CAD-to-Camera Quality AI</small>
+        </span>
+      </a>
+      <nav class="nav">
+        <a href="#thesis">투자 포인트</a>
+        <a href="#product">제품</a>
+        <a href="#market">시장</a>
+        <a href="#demo">데모</a>
+        <a href="#contact">PoC</a>
+      </nav>
+      <div class="status-pill" id="serviceStatus">상태 확인 중</div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-content">
+          <p class="eyebrow">Seed Investment Concept</p>
+          <h1>3Dto2DVerify</h1>
+          <p class="hero-copy">
+            3D 도면과 2D 카메라를 연결해 제조 현장의 치수 검사를 자동화하는
+            CAD 기준 품질 검증 소프트웨어입니다.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-link" href="#thesis">투자 논리 보기</a>
+            <a class="secondary-link" href="#demo">라이브 데모</a>
+          </div>
+        </div>
+        <div class="hero-metrics" aria-label="핵심 투자 지표">
+          <div>
+            <strong>5초 이내</strong>
+            <span>라인 판정 목표</span>
+          </div>
+          <div>
+            <strong>±0.05mm</strong>
+            <span>소형 부품 목표 정확도</span>
+          </div>
+          <div>
+            <strong>100%</strong>
+            <span>전수 검사 지향</span>
+          </div>
+          <div>
+            <strong>API First</strong>
+            <span>MES/ERP 연동 구조</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="thesis-section" id="thesis">
+        <div class="section-copy">
+          <p class="eyebrow">Investment Thesis</p>
+          <h2>제조 품질 검사는 여전히 사람과 고가 장비에 묶여 있습니다</h2>
+          <p>
+            중소 제조사는 CMM, 3D 스캐너, 숙련 검사원 사이에서 비용과 속도를 타협합니다.
+            3Dto2DVerify는 이미 존재하는 CAD 데이터를 검사 기준으로 바꾸고, 저비용 카메라로
+            치수 오차를 자동 판정하는 소프트웨어 계층을 만듭니다.
+          </p>
+        </div>
+        <div class="thesis-grid">
+          <article class="thesis-card accent-blue">
+            <span>Problem</span>
+            <strong>수동 샘플링 검사</strong>
+            <p>검사원 역량에 따라 결과가 달라지고, 전수 검사가 어려워 불량 유출 리스크가 남습니다.</p>
+          </article>
+          <article class="thesis-card accent-green">
+            <span>Wedge</span>
+            <strong>2D 카메라 기반 진입</strong>
+            <p>고가 3D 장비보다 빠르게 설치하고, 특정 부품군부터 라인별 반복 매출을 만들 수 있습니다.</p>
+          </article>
+          <article class="thesis-card accent-amber">
+            <span>Moat</span>
+            <strong>CAD 기준 자동화</strong>
+            <p>STEP 도면에서 검증 기준을 생성해 고객별 세팅 시간을 줄이고 운영 데이터를 축적합니다.</p>
+          </article>
+          <article class="thesis-card accent-red">
+            <span>Revenue</span>
+            <strong>SaaS + API + 온프레미스</strong>
+            <p>중소 제조사는 구독, 대형 고객은 API 과금, 보안 고객은 온프레미스 라이선스로 확장합니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="product-section" id="product">
+        <div class="section-copy">
+          <p class="eyebrow">Product Concept</p>
+          <h2>도면, 카메라, 판정 리포트를 하나의 검증 라인으로 연결합니다</h2>
+          <p>
+            상면과 하면을 별도 검사 레인으로 처리한 뒤 자동 모델 체커에서 최종 형상 검증과
+            치수 판정을 수행하는 구조입니다.
+          </p>
+        </div>
+        <figure class="flow-image">
+          <img src="/assets/tech_overview.png" alt="3Dto2DVerify 기술 처리 흐름" />
+        </figure>
+      </section>
+
+      <section class="market-section" id="market">
+        <div class="market-header">
+          <p class="eyebrow">Go-to-Market</p>
+          <h2>정밀 가공 부품부터 반복 가능한 품질 검증 SaaS로 진입합니다</h2>
+        </div>
+        <div class="market-grid">
+          <article>
+            <strong>CNC 가공</strong>
+            <span>선반, 밀링, 브라켓, 플레이트류 치수 검사</span>
+          </article>
+          <article>
+            <strong>전자 부품</strong>
+            <span>PCB 하우징, 커넥터, 사출 성형품 외곽 검사</span>
+          </article>
+          <article>
+            <strong>자동차 협력사</strong>
+            <span>납품 전 전수 검사와 검사 이력 자동화</span>
+          </article>
+          <article>
+            <strong>방산·항공</strong>
+            <span>고공차 부품과 추적 가능한 품질 리포트</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="strategy-section">
+        <div class="strategy-card">
+          <p class="eyebrow">12-Month Milestones</p>
+          <h2>초기 투자금은 파일럿 고객과 자동화 엔진 완성에 집중합니다</h2>
+          <div class="milestone-list">
+            <div>
+              <span>01</span>
+              <strong>MVP 고도화</strong>
+              <p>치수 판정 API, 캘리브레이션, 리포트 저장, 라인 대시보드 안정화</p>
+            </div>
+            <div>
+              <span>02</span>
+              <strong>파일럿 3곳</strong>
+              <p>CNC/전자 부품군에서 반복 검사 시나리오와 ROI 데이터 확보</p>
+            </div>
+            <div>
+              <span>03</span>
+              <strong>ERP/MES 연동</strong>
+              <p>REST API와 검사 이력 구조를 고객 운영 시스템에 연결</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="demo-section" id="demo">
+        <div class="section-copy">
+          <p class="eyebrow">Live Product Signal</p>
+          <h2>투자자에게 바로 보여줄 수 있는 치수 판정 데모</h2>
+          <p>
+            아래 콘솔은 현재 동작하는 API를 호출합니다. 기준 치수와 측정값을 바꾸면
+            서버가 Pass, Warning, Fail 결과와 JSON 리포트를 반환합니다.
+          </p>
+        </div>
+
+        <div class="console-grid">
+          <section class="panel input-panel" aria-labelledby="inputTitle">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Request</p>
+                <h2 id="inputTitle">검증 요청</h2>
+              </div>
+              <button type="button" class="ghost-button" id="sampleButton">샘플 실행</button>
+            </div>
+
+            <form id="verifyForm" class="verify-form">
+              <div class="field-row">
+                <label>
+                  부품 ID
+                  <input id="partId" name="partId" value="PART-DEMO-001" autocomplete="off" />
+                </label>
+                <label>
+                  기본 공차(mm)
+                  <input id="tolerance" name="tolerance" type="number" min="0.001" step="0.001" value="0.050" />
+                </label>
+              </div>
+
+              <div class="dimension-table" role="table" aria-label="검증 치수 목록">
+                <div class="dimension-row dimension-header" role="row">
+                  <span>검사 항목</span>
+                  <span>기준(mm)</span>
+                  <span>측정(mm)</span>
+                  <span>공차(mm)</span>
+                </div>
+                <div id="dimensionRows"></div>
+              </div>
+
+              <div class="button-row">
+                <button type="button" class="secondary-button" id="addRowButton">항목 추가</button>
+                <button type="submit" class="primary-button">검증 실행</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel result-panel" aria-labelledby="resultTitle">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Response</p>
+                <h2 id="resultTitle">판정 결과</h2>
+              </div>
+              <span class="verdict-badge" id="overallBadge">대기</span>
+            </div>
+
+            <div class="summary-grid" id="summaryGrid">
+              <div><strong>0</strong><span>Total</span></div>
+              <div><strong>0</strong><span>Pass</span></div>
+              <div><strong>0</strong><span>Warning</span></div>
+              <div><strong>0</strong><span>Fail</span></div>
+            </div>
+
+            <div class="result-list" id="resultList" aria-live="polite"></div>
+            <pre class="json-view" id="jsonView">{}</pre>
+          </section>
+        </div>
+      </section>
+
+      <section class="contact-section" id="contact">
+        <div class="section-copy">
+          <p class="eyebrow">Pilot Pipeline</p>
+          <h2>PoC, 투자 미팅, 기술 검토 요청을 남길 수 있습니다</h2>
+          <p>문의는 서버의 <code>outputs/contact_messages.jsonl</code>에 저장됩니다.</p>
+        </div>
+        <form class="contact-form" id="contactForm">
+          <label>
+            이름
+            <input id="contactName" required />
+          </label>
+          <label>
+            이메일
+            <input id="contactEmail" type="email" required />
+          </label>
+          <label>
+            회사
+            <input id="contactCompany" />
+          </label>
+          <label>
+            문의 내용
+            <textarea id="contactMessage" required>초기 투자 검토 및 PoC 상담을 요청합니다.</textarea>
+          </label>
+          <button type="submit" class="primary-button">문의 저장</button>
+          <p class="form-note" id="contactResult" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <footer>
+      <span>3Dto2DVerify</span>
+      <span>Design &amp; Manufacturing by 3rd party, Verification by us</span>
+      <a href="/assets/solution.pdf">투자 검토 PDF</a>
+    </footer>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
