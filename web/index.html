@@ -163,71 +163,51 @@
       <section class="demo-section" id="demo">
         <div class="section-copy">
           <p class="eyebrow">Live Product Signal</p>
-          <h2>투자자에게 바로 보여줄 수 있는 치수 판정 데모</h2>
+          <h2>Technology Overview를 그대로 활용한 라인 검증 데모</h2>
           <p>
-            아래 콘솔은 현재 동작하는 API를 호출합니다. 기준 치수와 측정값을 바꾸면
-            서버가 Pass, Warning, Fail 결과와 JSON 리포트를 반환합니다.
+            현재 보유한 기술 흐름 이미지를 중심에 두고, 상면/하면 레인이 어떤 순서로
+            처리되는지 단계별로 보여줍니다. 마지막 모델 체커 단계에서는 실제 검증 API가
+            JSON 판정 리포트를 반환합니다.
           </p>
         </div>
 
-        <div class="console-grid">
-          <section class="panel input-panel" aria-labelledby="inputTitle">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">Request</p>
-                <h2 id="inputTitle">검증 요청</h2>
-              </div>
-              <button type="button" class="ghost-button" id="sampleButton">샘플 실행</button>
+        <div class="overview-demo">
+          <section class="overview-stage" aria-label="Technology Overview Live Demo">
+            <div class="stage-toolbar">
+              <span class="lane-badge" id="demoLaneBadge">Top View Lane</span>
+              <button type="button" class="ghost-button" id="playDemoButton">자동 재생</button>
             </div>
 
-            <form id="verifyForm" class="verify-form">
-              <div class="field-row">
-                <label>
-                  부품 ID
-                  <input id="partId" name="partId" value="PART-DEMO-001" autocomplete="off" />
-                </label>
-                <label>
-                  기본 공차(mm)
-                  <input id="tolerance" name="tolerance" type="number" min="0.001" step="0.001" value="0.050" />
-                </label>
-              </div>
+            <div class="overview-frame" id="overviewFrame">
+              <img src="/assets/tech_overview.png" alt="상면과 하면 검사 기술 흐름" />
+              <div class="scan-window" id="scanWindow"></div>
+              <div class="focus-marker" id="focusMarker"></div>
+            </div>
 
-              <div class="dimension-table" role="table" aria-label="검증 치수 목록">
-                <div class="dimension-row dimension-header" role="row">
-                  <span>검사 항목</span>
-                  <span>기준(mm)</span>
-                  <span>측정(mm)</span>
-                  <span>공차(mm)</span>
-                </div>
-                <div id="dimensionRows"></div>
-              </div>
-
-              <div class="button-row">
-                <button type="button" class="secondary-button" id="addRowButton">항목 추가</button>
-                <button type="submit" class="primary-button">검증 실행</button>
-              </div>
-            </form>
+            <div class="step-strip" id="stepStrip" aria-label="검증 단계 선택"></div>
           </section>
 
-          <section class="panel result-panel" aria-labelledby="resultTitle">
-            <div class="panel-head">
-              <div>
-                <p class="eyebrow">Response</p>
-                <h2 id="resultTitle">판정 결과</h2>
-              </div>
+          <aside class="demo-panel">
+            <p class="eyebrow">Current Step</p>
+            <h3 id="demoStepTitle">Top Target Model</h3>
+            <p id="demoStepBody">상면 CAD 기준 모델을 불러와 카메라 이미지와 비교할 기준 좌표계를 준비합니다.</p>
+
+            <div class="demo-progress" aria-label="데모 진행률">
+              <span id="demoProgressBar"></span>
+            </div>
+
+            <div class="inspection-metrics" id="inspectionMetrics">
+              <div><strong>Top</strong><span>대기</span></div>
+              <div><strong>Bottom</strong><span>대기</span></div>
+              <div><strong>Checker</strong><span>대기</span></div>
+            </div>
+
+            <div class="live-report-head">
+              <span>API Report</span>
               <span class="verdict-badge" id="overallBadge">대기</span>
             </div>
-
-            <div class="summary-grid" id="summaryGrid">
-              <div><strong>0</strong><span>Total</span></div>
-              <div><strong>0</strong><span>Pass</span></div>
-              <div><strong>0</strong><span>Warning</span></div>
-              <div><strong>0</strong><span>Fail</span></div>
-            </div>
-
-            <div class="result-list" id="resultList" aria-live="polite"></div>
             <pre class="json-view" id="jsonView">{}</pre>
-          </section>
+          </aside>
         </div>
       </section>
 
