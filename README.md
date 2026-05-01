@@ -33,6 +33,8 @@ python server.py --host 0.0.0.0 --port 8000
 
 Render 배포 설정은 `render.yaml`에 들어 있습니다.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/jinguheo/3Dto2DVerify)
+
 1. GitHub 저장소를 Render에 연결합니다.
 2. `New > Blueprint`를 선택하고 이 저장소를 고릅니다.
 3. Render가 `render.yaml`을 읽어 Python Web Service를 생성합니다.
