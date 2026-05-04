@@ -920,6 +920,88 @@ footer a {
   text-decoration: none;
 }
 
+.admin-page {
+  background: #f4f7f3;
+}
+
+.admin-shell {
+  display: grid;
+  gap: 18px;
+  width: min(1180px, calc(100% - 32px));
+  padding: 28px 0 48px;
+}
+
+.admin-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(120px, 0.45fr) auto auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.admin-toolbar + .admin-toolbar {
+  grid-template-columns: minmax(240px, 1fr) auto minmax(220px, 1fr);
+}
+
+.admin-toolbar label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.admin-toolbar input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--text);
+}
+
+.contact-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.contact-table {
+  width: 100%;
+  min-width: 880px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.contact-table th,
+.contact-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.contact-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-muted);
+  color: var(--ink);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.contact-table td:last-child {
+  min-width: 320px;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 1020px) {
   .topbar {
     align-items: flex-start;
@@ -1002,6 +1084,11 @@ footer a {
   }
 
   .result-item {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-toolbar,
+  .admin-toolbar + .admin-toolbar {
     grid-template-columns: 1fr;
   }
 }

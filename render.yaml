@@ -11,3 +11,23 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
+      - key: CONTACT_EMAIL_TO
+        sync: false
+      - key: CONTACT_EXPORT_EMAIL_TO
+        sync: false
+      - key: CONTACT_EMAIL_FROM
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_STARTTLS
+        value: "true"
+      - key: SMTP_SSL
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false

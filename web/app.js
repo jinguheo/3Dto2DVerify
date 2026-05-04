@@ -304,7 +304,12 @@ contactForm.addEventListener("submit", async (event) => {
     if (!response.ok) {
       throw new Error(body.message || "문의 저장 실패");
     }
-    contactResult.textContent = `저장되었습니다. 문의 ID: ${body.message_id}`;
+    const mailStatus = body.email_configured
+      ? body.email_sent
+        ? "메일 알림 전송됨"
+        : "메일 알림 실패"
+      : "메일 알림 미설정";
+    contactResult.textContent = `저장되었습니다. 문의 ID: ${body.message_id} (${mailStatus})`;
     contactForm.reset();
   } catch (error) {
     contactResult.textContent = error.message;

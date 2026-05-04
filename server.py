@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import hmac
+import io
 import json
 import mimetypes
 import os
+import smtplib
+import ssl
 import uuid
 from datetime import datetime, timezone
+from email.message import EmailMessage
+from email.utils import formataddr
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 
 ROOT = Path(__file__).resolve().parent
@@ -43,6 +50,8 @@ OVERVIEW = {
         "GET /api/sample-report": "샘플 검증 리포트",
         "POST /api/verify": "치수 검증 판정",
         "POST /api/contact": "문의 저장",
+        "GET /api/admin/contacts": "관리자 문의 목록",
+        "POST /api/admin/contacts/email": "관리자 문의 CSV 메일 발송",
     },
 }
 
@@ -70,6 +79,8 @@ DEFAULT_PRIMITIVES = [
     },
 ]
 
+CONTACT_FIELDS = ("id", "timestamp", "name", "email", "company", "message")
+
 
 class ServiceError(Exception):
     def __init__(self, status: int, message: str, details: Any | None = None) -> None:
@@ -91,6 +102,13 @@ def env_port(default: int = 8000) -> int:
         return int(value)
     except ValueError:
         return default
+
+
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def as_float(value: Any, field: str) -> float:
@@ -117,6 +135,53 @@ def clean_text(value: Any, default: str, max_length: int = 160) -> str:
     if not text:
         return default
     return text[:max_length]
+
+
+def clean_header(value: Any, default: str, max_length: int = 160) -> str:
+    return " ".join(clean_text(value, default, max_length).splitlines())
+
+
+def smtp_config() -> dict[str, Any] | None:
+    smtp_host = clean_text(os.environ.get("SMTP_HOST"), "", 255)
+    if not smtp_host:
+        return None
+
+    smtp_ssl = env_bool("SMTP_SSL", False)
+    smtp_starttls = env_bool("SMTP_STARTTLS", not smtp_ssl)
+    smtp_port = 465 if smtp_ssl else 587
+    if os.environ.get("SMTP_PORT"):
+        try:
+            smtp_port = int(os.environ["SMTP_PORT"])
+        except ValueError as exc:
+            raise RuntimeError("SMTP_PORT must be an integer") from exc
+
+    return {
+        "host": smtp_host,
+        "port": smtp_port,
+        "ssl": smtp_ssl,
+        "starttls": smtp_starttls,
+        "user": clean_text(os.environ.get("SMTP_USER"), "", 255),
+        "password": os.environ.get("SMTP_PASSWORD", ""),
+    }
+
+
+def send_email_message(message: EmailMessage) -> None:
+    config = smtp_config()
+    if not config:
+        raise RuntimeError("SMTP_HOST is not configured")
+
+    context = ssl.create_default_context()
+    if config["ssl"]:
+        smtp: smtplib.SMTP = smtplib.SMTP_SSL(config["host"], config["port"], timeout=10, context=context)
+    else:
+        smtp = smtplib.SMTP(config["host"], config["port"], timeout=10)
+
+    with smtp:
+        if config["starttls"] and not config["ssl"]:
+            smtp.starttls(context=context)
+        if config["user"] and config["password"]:
+            smtp.login(config["user"], config["password"])
+        smtp.send_message(message)
 
 
 def evaluate_report(payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -185,6 +250,48 @@ def evaluate_report(payload: dict[str, Any] | None = None) -> dict[str, Any]:
     }
 
 
+def send_contact_email(contact: dict[str, str]) -> dict[str, bool]:
+    recipient = clean_header(os.environ.get("CONTACT_EMAIL_TO"), "", 255)
+    if not smtp_config() or not recipient:
+        return {"email_configured": False, "email_sent": False}
+
+    smtp_user = clean_text(os.environ.get("SMTP_USER"), "", 255)
+    sender = (
+        clean_header(os.environ.get("CONTACT_EMAIL_FROM"), "", 255)
+        or clean_header(smtp_user, "", 255)
+        or recipient
+    )
+    subject_prefix = clean_header(os.environ.get("CONTACT_EMAIL_SUBJECT_PREFIX"), "3Dto2DVerify inquiry", 80)
+
+    message = EmailMessage()
+    message["Subject"] = f"{subject_prefix}: {clean_header(contact['name'], 'New contact', 80)}"
+    message["From"] = sender
+    message["To"] = recipient
+    message["Reply-To"] = formataddr(
+        (clean_header(contact["name"], "", 80), clean_header(contact["email"], "", 120))
+    )
+    message.set_content(
+        "\n".join(
+            [
+                "A new 3Dto2DVerify contact request was submitted.",
+                "",
+                f"Message ID: {contact['id']}",
+                f"Timestamp: {contact['timestamp']}",
+                f"Name: {contact['name']}",
+                f"Email: {contact['email']}",
+                f"Company: {contact['company'] or '-'}",
+                "",
+                "Message:",
+                contact["message"],
+            ]
+        )
+    )
+
+    send_email_message(message)
+
+    return {"email_configured": True, "email_sent": True}
+
+
 def store_contact(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ServiceError(400, "request body must be a JSON object")
@@ -214,7 +321,107 @@ def store_contact(payload: dict[str, Any]) -> dict[str, Any]:
     with (OUTPUTS_DIR / "contact_messages.jsonl").open("a", encoding="utf-8") as file:
         file.write(json.dumps(contact, ensure_ascii=False) + "\n")
 
-    return {"accepted": True, "message_id": contact["id"]}
+    try:
+        email_status = send_contact_email(contact)
+    except Exception as exc:
+        print(f"[{utc_now()}] contact email failed for {contact['id']}: {exc}")
+        email_status = {"email_configured": True, "email_sent": False}
+
+    return {"accepted": True, "message_id": contact["id"], **email_status}
+
+
+def load_contacts() -> list[dict[str, str]]:
+    path = OUTPUTS_DIR / "contact_messages.jsonl"
+    if not path.exists():
+        return []
+
+    contacts: list[dict[str, str]] = []
+    with path.open("r", encoding="utf-8") as file:
+        for line_number, line in enumerate(file, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                contacts.append(
+                    {
+                        "id": f"INVALID-LINE-{line_number}",
+                        "timestamp": "",
+                        "name": "",
+                        "email": "",
+                        "company": "",
+                        "message": "Invalid JSON line",
+                    }
+                )
+                continue
+            if not isinstance(item, dict):
+                continue
+            contacts.append(
+                {
+                    "id": clean_text(item.get("id"), "", 80),
+                    "timestamp": clean_text(item.get("timestamp"), "", 40),
+                    "name": clean_text(item.get("name"), "", 80),
+                    "email": clean_text(item.get("email"), "", 120),
+                    "company": clean_text(item.get("company"), "", 120),
+                    "message": clean_text(item.get("message"), "", 2000),
+                }
+            )
+
+    return contacts
+
+
+def contacts_to_csv(contacts: list[dict[str, str]]) -> str:
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=CONTACT_FIELDS)
+    writer.writeheader()
+    for contact in contacts:
+        writer.writerow({field: contact.get(field, "") for field in CONTACT_FIELDS})
+    return output.getvalue()
+
+
+def send_contacts_export_email(recipient: str | None = None) -> dict[str, Any]:
+    if not smtp_config():
+        raise ServiceError(503, "SMTP_HOST is not configured")
+
+    recipient = clean_header(
+        recipient,
+        "",
+        255,
+    ) or clean_header(os.environ.get("CONTACT_EXPORT_EMAIL_TO"), "", 255) or clean_header(
+        os.environ.get("CONTACT_EMAIL_TO"), "", 255
+    )
+    if not recipient:
+        raise ServiceError(400, "export recipient email is required")
+
+    contacts = load_contacts()
+    csv_data = contacts_to_csv(contacts)
+    timestamp = utc_now().replace(":", "").replace("-", "")
+    filename = f"3dto2dverify-contacts-{timestamp}.csv"
+    smtp_user = clean_text(os.environ.get("SMTP_USER"), "", 255)
+    sender = (
+        clean_header(os.environ.get("CONTACT_EMAIL_FROM"), "", 255)
+        or clean_header(smtp_user, "", 255)
+        or recipient
+    )
+
+    message = EmailMessage()
+    message["Subject"] = f"3Dto2DVerify contact export ({len(contacts)} messages)"
+    message["From"] = sender
+    message["To"] = recipient
+    message.set_content(
+        "\n".join(
+            [
+                "Attached is the current 3Dto2DVerify contact export.",
+                "",
+                f"Generated at: {utc_now()}",
+                f"Message count: {len(contacts)}",
+            ]
+        )
+    )
+    message.add_attachment(csv_data.encode("utf-8-sig"), maintype="text", subtype="csv", filename=filename)
+    send_email_message(message)
+    return {"email_sent": True, "recipient": recipient, "count": len(contacts), "filename": filename}
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -222,7 +429,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def end_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Token, Authorization")
         self.send_header("X-Content-Type-Options", "nosniff")
         super().end_headers()
 
@@ -232,10 +439,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
-        path = urlsplit(self.path).path
+        request_url = urlsplit(self.path)
+        path = request_url.path
 
         if path in ("", "/", "/index.html"):
             self.serve_file(WEB_ROOT / "index.html")
+            return
+
+        if path == "/admin/contacts":
+            self.serve_file(WEB_ROOT / "contacts.html")
             return
 
         if path == "/health":
@@ -258,6 +470,36 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_json(200, evaluate_report({"part_id": "PART-DEMO-001"}))
             return
 
+        if path == "/api/admin/contacts":
+            try:
+                self.require_admin()
+                query = parse_qs(request_url.query)
+                contacts = list(reversed(load_contacts()))
+                limit = self.parse_limit(query.get("limit", ["200"])[0])
+                visible_contacts = contacts[:limit]
+                if query.get("format", ["json"])[0].lower() == "csv":
+                    data = contacts_to_csv(visible_contacts).encode("utf-8-sig")
+                    self.send_data(
+                        200,
+                        data,
+                        "text/csv; charset=utf-8",
+                        {
+                            "Content-Disposition": 'attachment; filename="3dto2dverify-contacts.csv"',
+                        },
+                    )
+                    return
+                self.send_json(
+                    200,
+                    {
+                        "count": len(contacts),
+                        "returned": len(visible_contacts),
+                        "contacts": visible_contacts,
+                    },
+                )
+            except ServiceError as exc:
+                self.send_service_error(exc)
+            return
+
         if path in PUBLIC_ASSETS:
             self.serve_file(PUBLIC_ASSETS[path])
             return
@@ -278,12 +520,13 @@ class RequestHandler(BaseHTTPRequestHandler):
             if path == "/api/contact":
                 self.send_json(202, store_contact(payload))
                 return
+            if path == "/api/admin/contacts/email":
+                self.require_admin()
+                self.send_json(202, send_contacts_export_email(payload.get("recipient")))
+                return
             self.send_json(404, {"error": "not_found", "message": f"No route for {path}"})
         except ServiceError as exc:
-            body: dict[str, Any] = {"error": "bad_request", "message": exc.message}
-            if exc.details is not None:
-                body["details"] = exc.details
-            self.send_json(exc.status, body)
+            self.send_service_error(exc)
         except Exception as exc:  # pragma: no cover - keeps the service responsive in production.
             self.send_json(500, {"error": "internal_error", "message": str(exc)})
 
@@ -314,6 +557,47 @@ class RequestHandler(BaseHTTPRequestHandler):
         if not isinstance(payload, dict):
             raise ServiceError(400, "request body must be a JSON object")
         return payload
+
+    def require_admin(self) -> None:
+        expected = os.environ.get("ADMIN_TOKEN", "")
+        if not expected:
+            raise ServiceError(503, "ADMIN_TOKEN is not configured")
+
+        provided = self.headers.get("X-Admin-Token", "")
+        authorization = self.headers.get("Authorization", "")
+        if authorization.startswith("Bearer "):
+            provided = authorization.removeprefix("Bearer ").strip()
+
+        if not provided or not hmac.compare_digest(provided, expected):
+            raise ServiceError(401, "admin token is invalid")
+
+    def parse_limit(self, value: str) -> int:
+        try:
+            limit = int(value)
+        except ValueError as exc:
+            raise ServiceError(400, "limit must be an integer") from exc
+        return max(1, min(limit, 1000))
+
+    def send_service_error(self, exc: ServiceError) -> None:
+        body: dict[str, Any] = {"error": "request_failed", "message": exc.message}
+        if exc.details is not None:
+            body["details"] = exc.details
+        self.send_json(exc.status, body)
+
+    def send_data(
+        self,
+        status: int,
+        data: bytes,
+        content_type: str,
+        extra_headers: dict[str, str] | None = None,
+    ) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        for key, value in (extra_headers or {}).items():
+            self.send_header(key, value)
+        self.end_headers()
+        self.wfile.write(data)
 
     def serve_file(self, file_path: Path) -> None:
         try:
