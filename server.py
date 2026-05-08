@@ -8,6 +8,7 @@ import json
 import mimetypes
 import os
 import smtplib
+import sqlite3
 import ssl
 import uuid
 from datetime import datetime, timezone
@@ -22,6 +23,7 @@ from urllib.parse import parse_qs, urlsplit
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 OUTPUTS_DIR = ROOT / "outputs"
+DB_PATH = OUTPUTS_DIR / "verify.db"
 
 SERVICE_NAME = "3Dto2DVerify"
 SERVICE_VERSION = "0.1.0"
@@ -51,6 +53,8 @@ OVERVIEW = {
         "POST /api/verify": "치수 검증 판정",
         "POST /api/contact": "문의 저장",
         "GET /api/admin/contacts": "관리자 문의 목록",
+        "GET /api/admin/inspections": "검증 이력 목록",
+        "GET /admin/history": "검증 이력 관리 화면",
         "POST /api/admin/contacts/email": "관리자 문의 CSV 메일 발송",
     },
 }
@@ -182,6 +186,72 @@ def send_email_message(message: EmailMessage) -> None:
         if config["user"] and config["password"]:
             smtp.login(config["user"], config["password"])
         smtp.send_message(message)
+
+
+def init_db() -> None:
+    """Initializes the SQLite database with required tables."""
+    OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(DB_PATH) as conn:
+        # Table for high-level inspection results
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS inspections (
+                id TEXT PRIMARY KEY,
+                part_id TEXT,
+                timestamp TEXT,
+                overall TEXT,
+                total_count INTEGER,
+                pass_count INTEGER,
+                warning_count INTEGER,
+                fail_count INTEGER
+            )
+        """)
+        # Table for individual measurement primitives
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS primitives (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                inspection_id TEXT,
+                feature_id TEXT,
+                type TEXT,
+                verdict TEXT,
+                expected_mm REAL,
+                measured_mm REAL,
+                error_mm REAL,
+                tolerance_mm REAL,
+                FOREIGN KEY(inspection_id) REFERENCES inspections(id)
+            )
+        """)
+        # Table for contact inquiries (replacing JSONL)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS contacts (
+                id TEXT PRIMARY KEY,
+                timestamp TEXT,
+                name TEXT,
+                email TEXT,
+                company TEXT,
+                message TEXT
+            )
+        """)
+
+
+def store_inspection(report: dict[str, Any]) -> None:
+    """Persists an inspection report to the database."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "INSERT INTO inspections VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                report["inspection_id"], report["part_id"], report["timestamp"],
+                report["overall"], report["summary"]["total"], report["summary"]["pass"],
+                report["summary"]["warning"], report["summary"]["fail"]
+            )
+        )
+        for p in report["primitives"]:
+            conn.execute(
+                "INSERT INTO primitives (inspection_id, feature_id, type, verdict, expected_mm, measured_mm, error_mm, tolerance_mm) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    report["inspection_id"], p["id"], p["type"], p["verdict"],
+                    p["expected_mm"], p["measured_mm"], p["error_mm"], p["abs_error_mm"], p["tolerance_mm"]
+                )
+            )
 
 
 def evaluate_report(payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -317,9 +387,12 @@ def store_contact(payload: dict[str, Any]) -> dict[str, Any]:
         "message": message,
     }
 
-    OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
-    with (OUTPUTS_DIR / "contact_messages.jsonl").open("a", encoding="utf-8") as file:
-        file.write(json.dumps(contact, ensure_ascii=False) + "\n")
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "INSERT INTO contacts (id, timestamp, name, email, company, message) VALUES (?, ?, ?, ?, ?, ?)",
+            (contact["id"], contact["timestamp"], contact["name"], 
+             contact["email"], contact["company"], contact["message"])
+        )
 
     try:
         email_status = send_contact_email(contact)
@@ -331,44 +404,21 @@ def store_contact(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def load_contacts() -> list[dict[str, str]]:
-    path = OUTPUTS_DIR / "contact_messages.jsonl"
-    if not path.exists():
+    if not DB_PATH.exists():
         return []
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute("SELECT * FROM contacts ORDER BY timestamp DESC")
+        return [dict(row) for row in cursor.fetchall()]
 
-    contacts: list[dict[str, str]] = []
-    with path.open("r", encoding="utf-8") as file:
-        for line_number, line in enumerate(file, start=1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                item = json.loads(line)
-            except json.JSONDecodeError:
-                contacts.append(
-                    {
-                        "id": f"INVALID-LINE-{line_number}",
-                        "timestamp": "",
-                        "name": "",
-                        "email": "",
-                        "company": "",
-                        "message": "Invalid JSON line",
-                    }
-                )
-                continue
-            if not isinstance(item, dict):
-                continue
-            contacts.append(
-                {
-                    "id": clean_text(item.get("id"), "", 80),
-                    "timestamp": clean_text(item.get("timestamp"), "", 40),
-                    "name": clean_text(item.get("name"), "", 80),
-                    "email": clean_text(item.get("email"), "", 120),
-                    "company": clean_text(item.get("company"), "", 120),
-                    "message": clean_text(item.get("message"), "", 2000),
-                }
-            )
 
-    return contacts
+def load_inspections(limit: int = 100) -> list[dict[str, Any]]:
+    if not DB_PATH.exists():
+        return []
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute("SELECT * FROM inspections ORDER BY timestamp DESC LIMIT ?", (limit,))
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def contacts_to_csv(contacts: list[dict[str, str]]) -> str:
@@ -450,6 +500,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.serve_file(WEB_ROOT / "contacts.html")
             return
 
+        if path == "/admin/history":
+            self.serve_file(WEB_ROOT / "history.html")
+            return
+
         if path == "/health":
             self.send_json(
                 200,
@@ -500,6 +554,17 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.send_service_error(exc)
             return
 
+        if path == "/api/admin/inspections":
+            try:
+                self.require_admin()
+                query = parse_qs(request_url.query)
+                limit = self.parse_limit(query.get("limit", ["100"])[0])
+                inspections = load_inspections(limit)
+                self.send_json(200, {"count": len(inspections), "inspections": inspections})
+            except ServiceError as exc:
+                self.send_service_error(exc)
+            return
+
         if path in PUBLIC_ASSETS:
             self.serve_file(PUBLIC_ASSETS[path])
             return
@@ -515,7 +580,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         try:
             payload = self.read_json()
             if path == "/api/verify":
-                self.send_json(200, evaluate_report(payload))
+                report = evaluate_report(payload)
+                store_inspection(report)
+                self.send_json(200, report)
                 return
             if path == "/api/contact":
                 self.send_json(202, store_contact(payload))
@@ -609,7 +676,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         web_root = WEB_ROOT.resolve()
         root = ROOT.resolve()
         public_asset_paths = {path.resolve() for path in PUBLIC_ASSETS.values()}
-        allowed = resolved in public_asset_paths or resolved == web_root / "index.html" or web_root in resolved.parents
+        allowed = resolved in public_asset_paths or web_root == resolved or web_root in resolved.parents
         if not allowed or not resolved.is_file() or (root not in resolved.parents and resolved != root):
             self.send_json(403, {"error": "forbidden", "message": "file is outside the public web root"})
             return
@@ -641,6 +708,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the 3Dto2DVerify web service.")
+    init_db()
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"), help="Bind host. Use 0.0.0.0 for LAN access.")
     parser.add_argument("--port", default=env_port(), type=int, help="Bind port. Defaults to the PORT environment variable.")
     args = parser.parse_args()

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>3Dto2DVerify | 문의 관리</title>
+    <title>3Dto2DVerify | 검사 이력</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body class="admin-page">
@@ -12,7 +12,7 @@
         <span class="brand-mark">3D</span>
         <span>
           <strong>3Dto2DVerify</strong>
-          <small>Contact Console</small>
+          <small>History Console</small>
         </span>
       </a>
       <nav class="nav">
@@ -24,48 +24,36 @@
     </header>
 
     <main class="admin-shell">
-      <section class="admin-toolbar" aria-label="문의 관리 도구">
+      <section class="admin-toolbar" aria-label="이력 조회 도구">
         <label>
           관리자 토큰
           <input id="adminToken" type="password" autocomplete="off" />
         </label>
         <label>
           표시 수
-          <input id="contactLimit" type="number" min="1" max="1000" value="200" />
+          <input id="historyLimit" type="number" min="1" max="1000" value="100" />
         </label>
-        <button type="button" class="primary-button" id="loadContacts">목록 보기</button>
-        <button type="button" class="secondary-button" id="downloadContacts">CSV 다운로드</button>
-      </section>
-
-      <section class="admin-toolbar" aria-label="문의 메일 발송">
-        <label>
-          받을 메일
-          <input id="exportRecipient" type="email" placeholder="Render 환경변수 기본값 사용" />
-        </label>
-        <button type="button" class="primary-button" id="emailContacts">CSV 메일 발송</button>
+        <button type="button" class="primary-button" id="loadHistory">이력 불러오기</button>
         <p class="form-note" id="adminResult" aria-live="polite"></p>
       </section>
 
-      <section class="contact-table-wrap" aria-label="저장된 문의 목록">
+      <section class="contact-table-wrap" aria-label="저장된 검사 이력 목록">
         <table class="contact-table">
           <thead>
             <tr>
               <th>시간</th>
-              <th>이름</th>
-              <th>이메일</th>
-              <th>회사</th>
-              <th>문의</th>
+              <th>Part ID</th>
+              <th>판정</th>
+              <th>요약 (P/W/F)</th>
+              <th>ID</th>
             </tr>
           </thead>
-          <tbody id="contactsBody">
-            <tr>
-              <td colspan="5">목록을 불러와 주세요.</td>
-            </tr>
+          <tbody id="historyBody">
+            <tr><td colspan="5">이력을 불러와 주세요.</td></tr>
           </tbody>
         </table>
       </section>
     </main>
-
-    <script src="/static/contacts.js"></script>
+    <script src="/static/history.js"></script>
   </body>
 </html>
