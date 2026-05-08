@@ -130,7 +130,7 @@ emailContacts.addEventListener("click", async () => {
     });
     const body = await response.json();
     if (!response.ok) {
-      throw new Error(body.message || "메일 발송 실패");
+      throw new Error(response.status === 503 ? (body.message || "SMTP가 설정되지 않았습니다.") : (body.message || "메일 발송 실패"));
     }
     setResult(`${body.count}건을 ${body.recipient}에게 보냈습니다.`);
   } catch (error) {

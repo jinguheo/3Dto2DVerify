@@ -432,7 +432,7 @@ def contacts_to_csv(contacts: list[dict[str, str]]) -> str:
 
 def send_contacts_export_email(recipient: str | None = None) -> dict[str, Any]:
     if not smtp_config():
-        raise ServiceError(503, "SMTP_HOST is not configured")
+        raise ServiceError(503, "이메일 발송을 사용할 수 없습니다. Render 대시보드에서 SMTP_HOST 환경변수를 설정해 주세요.")
 
     recipient = clean_header(
         recipient,
